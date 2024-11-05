@@ -1,0 +1,21 @@
+project:
+  type: website
+
+website:
+  title: "MarElkem.github.io"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - about.qmd
+      - about2.qmd
+      - about3.qmd
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+
+editor: visual
+

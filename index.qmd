@@ -1,0 +1,23 @@
+---
+title: "MP3 DS2"
+site: quarto-pub
+output: 
+  html: 
+    theme: cosmo
+    css: styles.css
+toc: true
+toc-title: "Contents"
+---
+
+## About Me
+
+![Maroova Elkemary](Captur2e.JPG)
+
+> > Hi! My name is Maroova Elkemary. I am a data enthusiast and love to combine data science with different realms such as video games, finance, sports, and music!
+
+> > I have had two data analysis work experiences so far where I worked with SQL, Python, and mostly focused on machine learning. I will show you a few of my data science projects so far in my school work!
+
+<a href="https://github.com/MarElkem">
+    <img src="https://img.icons8.com/ios-filled/50/000000/github.png" class="github-icon" alt="GitHub" />
+</a> 
+[GitHub Profile](https://github.com/MarElkem)

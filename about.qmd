@@ -1,0 +1,190 @@
+---
+title: "Mini-Project 1: Maps (Static)"
+---
+
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T,
+                      results = "hide")
+```
+
+**For this miniproject, we will be looking at data collected by the Consumer Financial Protection Bureau of complaints about consumer financial products and services from 06/01/24 to 09/10/24**
+
+```{r, echo=FALSE, warning=FALSE, include=FALSE}
+#loading all libraries and data below
+#| message: false
+#| warning: false
+#| echo: FALSE
+
+# Initial packages required (we'll be adding more)
+library(tidyverse)
+library(mdsr)      # package associated with our MDSR book
+library(maps)
+library(ggplot2)
+library(viridis)
+
+file_path="~/Sds 264 F24/MarElkem.github.io/complaints-2024-09-16_16_32.csv"
+
+library(sf) 
+
+states <- read_sf("https://rstudio.github.io/leaflet/json/us-states.geojson")  
+
+class(states) 
+
+states
+
+us_states <- map_data("state")
+us_states
+
+complaints <- read_csv(file_path)
+
+complaints
+
+colnames(complaints) 
+
+```
+
+```{r, warning=FALSE}
+
+#use the states dataset for interactive map plots and rename the column "name" which indicates state in order to join with our variable dataset.
+states <- states %>%
+  rename(region = name) %>%               
+  mutate(region = tolower(region))        
+
+states  
+```
+
+```{r, warning=FALSE}
+
+#rename all states in our complaint dataset to match with us_states and states
+complaints <- complaints |> 
+   mutate(region = case_when(
+    State == "AL" ~ "alabama", State == "AK" ~ "alaska", State == "AZ" ~ "arizona",
+    State == "AR" ~ "arkansas", State == "CA" ~ "california", State == "CO" ~ "colorado",
+    State == "CT" ~ "connecticut", State == "DE" ~ "delaware", State == "FL" ~ "florida",
+    State == "GA" ~ "georgia", State == "HI" ~ "hawaii", State == "ID" ~ "idaho",
+    State == "IL" ~ "illinois", State == "IN" ~ "indiana", State == "IA" ~ "iowa",
+    State == "KS" ~ "kansas", State == "KY" ~ "kentucky", State == "LA" ~ "louisiana",
+    State == "ME" ~ "maine", State == "MD" ~ "maryland", State == "MA" ~ "massachusetts",
+    State == "MI" ~ "michigan", State == "MN" ~ "minnesota", State == "MS" ~ "mississippi",
+    State == "MO" ~ "missouri", State == "MT" ~ "montana", State == "NE" ~ "nebraska",
+    State == "NV" ~ "nevada", State == "NH" ~ "new hampshire", State == "NJ" ~ "new jersey",
+    State == "NM" ~ "new mexico", State == "NY" ~ "new york", State == "NC" ~ "north carolina",
+    State == "ND" ~ "north dakota", State == "OH" ~ "ohio", State == "OK" ~ "oklahoma",
+    State == "OR" ~ "oregon", State == "PA" ~ "pennsylvania", State == "RI" ~ "rhode island",
+    State == "SC" ~ "south carolina", State == "SD" ~ "south dakota", State == "TN" ~ "tennessee",
+    State == "TX" ~ "texas", State == "UT" ~ "utah", State == "VT" ~ "vermont",
+    State == "VA" ~ "virginia", State == "WA" ~ "washington", State == "WV" ~ "west virginia",
+    State == "WI" ~ "wisconsin", State == "WY" ~ "wyoming"
+  )) 
+
+
+```
+
+```{r, warning=FALSE}
+#create our first subset of our dataset: most complaining states!
+
+complaints_summary <- complaints %>% 
+  group_by(region) %>% 
+  summarize(total_complaints = n())
+
+complaints_summary <- complaints_summary %>%  # save it and join with us_states for static plot
+  left_join(us_states, by = "region")
+
+```
+
+> > PLOT 1
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+lbeel <- complaints_summary %>% # save our labels
+  group_by(region) %>%
+  summarize(long = mean(long), lat = mean(lat)) %>% # center the labels on the middle of every state
+  mutate(region = as.factor(region))
+
+static1 <- complaints_summary |>
+  ggplot(mapping = aes(x = long, y = lat)) + 
+  geom_polygon(aes(fill = total_complaints, group = group), color = "black") + 
+  labs(
+    fill = "Number of Complaints",
+    caption = "Data Source: https://www.consumerfinance.gov/
+    Consumer Financial Protection Bureau 
+    (Complaints from 06/01/2024 - 09/10/2024)"
+  ) +
+  coord_map() + 
+  scale_fill_viridis_c() +
+  geom_text(
+    data = lbeel, 
+    mapping = aes(x = long, y = lat, label = region), 
+    size = 3, 
+    color = "white"
+  )
+
+static1
+```
+
+**We have a US state map showing the number of complaints from 06/01/24 to 09/10/24 against companies that were gathered on The Consumer Complaint Database- a collection of complaints about consumer financial products and services. We can see color-coding for each state with a legend on the right showing us the ranges of the different color assignments from purple(0-20k complaints)-blue(20-40k complaints)-teal(30-60k complaints)-green/yellow(60-80k+ complaints). All the states are purple except 7 states. In order of most complaints:**
+
+**Yellow : Florida (80k), Texas (\~70k)** **Green: California (60K), Georgia (50k)** **Blue: Illinois (35k), Pennsylvania (30K), New York (40k)**
+
+**The graph shows that the highest number of complaints is coming from Flordia, and the least coming from Alabama (10k) and the average complaint number per state is 20k**
+
+```{r, echo=FALSE, warning=FALSE}
+
+#second static plot, most complaind about companies per state!
+complaints_companystatic <- complaints %>%
+  group_by(region, Company) %>%
+  summarize(complaint_count = n(),
+            .groups = "drop") %>%  
+  slice_max(order_by = complaint_count, 
+            n = 1, 
+            by=region, 
+            with_ties = FALSE) 
+
+
+
+```
+
+```{r, echo=FALSE, warning=FALSE}
+
+#join our data with mapping dataset
+staticcompany <- complaints_companystatic %>% 
+  left_join(us_states, by="region") 
+
+  
+```
+
+> > PLOT 2
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+lbeel2 <- complaints_summary %>%
+  group_by(region) %>%
+  summarize(long = mean(long), lat = mean(lat)) %>%
+  mutate(region = as.factor(region))
+
+static2 <- staticcompany |>
+  ggplot(mapping = aes(x = long, y = lat)) + 
+  geom_polygon(aes(fill = Company, group = group), color = "black") + 
+  labs(
+    fill = "Company Complained About",
+    caption = "Data Source: https://www.consumerfinance.gov/
+    Consumer Financial Protection Bureau 
+    (Complaints from 06/01/2024 - 09/10/2024)"
+  ) +
+  coord_map() + 
+  scale_fill_viridis_d() +
+  geom_text(
+    data = lbeel2, 
+    mapping = aes(x = long, y = lat, label = region), 
+    size = 3, 
+    color = "white"
+  )
+
+static2
+```
+
+**Our plot informs us of the 3 most complained about companies- which are Transunion (a credit reporting agency headquarted in Chicago, Illinois), (Experian is a multinational data analytics and consumer credit reporting company headquartered in Dublin, Ireland), and Equifax (a consumer credit reporting agency headquartered in Atlanta, Georgia), Experian Information Solutions. The States who complain the most about Equifax are WA, OR, ID, WY, NE, KA, MI, TE, KE, WV, OH, NC, VI, MS, AL, LO. For Experian, it is MO and ND only- and all the rest are TransUnion.**

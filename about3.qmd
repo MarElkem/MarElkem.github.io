@@ -1,0 +1,92 @@
+---
+title: "Mini-Project 2: Data Acquisition"
+format: 
+  html:
+    code-fold: false
+---
+
+```{r, error=FALSE, warning=FALSE}
+#| include: FALSE
+
+library(tidyverse)
+library(stringr)
+library(rvest)
+library(polite)
+library(sf)
+library(maps)
+library(viridis)
+library(leaflet)
+library(htmltools)
+
+```
+
+**Data Source: https://fbref.com/en/comps/1/World-Cup-Stat**
+
+**Motivation: as two avid football (soccer) fans. We are hoping to analyze and explore the World Cup 2022 data. we will also potentially explore the last 10 World Cups. We will do so by exploring player statistics, match standings data, and other external variables such as sentiment analysis and audience engagement.**
+
+**Two similar questions we hope to explore are:**
+
+> > If there is a strong correlation between goals scored and points earned in the group stage
+
+> > Do points, goals scored, goals against, or goal difference have the highest impact on progression towards knockout/semi-finals stages.
+
+**Ethical Justification: We believe this data does not have ethical implications as long as it is scraped politely. One approach we will keep in mind is to clean and analyze various squads to get a representation of the real world rather than just focusing on popular squads**
+
+```{r, results='hide'}
+
+#First we have to make sure scraping is allowed
+robotstxt::paths_allowed("https://fbref.com/en/comps/1/World-Cup-Stats")
+
+#Next we scrape the data
+session <- bow("https://fbref.com/en/comps/1/World-Cup-Stats")
+
+
+# Next we will store our session 
+wc22 <- scrape(session)
+
+# Next we will save our tables
+tables <- html_nodes(wc22, css = "table")
+
+# Get all the groups we need
+html_table(tables, header = TRUE, fill = TRUE)   
+wc_group1 <- html_table(tables, header = TRUE, fill = TRUE)[[1]]  
+wc_group2 <- html_table(tables, header = TRUE, fill = TRUE)[[2]]  
+wc_group3 <- html_table(tables, header = TRUE, fill = TRUE)[[3]]  
+wc_group4 <- html_table(tables, header = TRUE, fill = TRUE)[[4]]  
+wc_group5 <- html_table(tables, header = TRUE, fill = TRUE)[[5]]  
+wc_group6 <- html_table(tables, header = TRUE, fill = TRUE)[[6]]  
+wc_group7 <- html_table(tables, header = TRUE, fill = TRUE)[[7]]  
+wc_group8 <- html_table(tables, header = TRUE, fill = TRUE)[[8]]  
+
+
+
+
+```
+
+> > Above we are scraping data of all the group stages of the 2022 World Cup
+
+```{r}
+all_groups <- bind_rows(lapply(list(wc_group1, wc_group2, wc_group3, wc_group4,
+                                      wc_group5, wc_group6, wc_group7, wc_group8), function(group) {
+  # Rename columns
+  colnames(group) <- c("Rank", "Squad", "Matches Played", "Wins", "Draws", "Losses",
+                       "Goals For", "Goals Against", "Goal Difference", "Points")
+  
+  # Remove the first two-letter abbreviation from Squad names
+  group$Squad <- str_replace(group$Squad, "^[^ ]+ ", "")
+  
+  # Remove the xGD/90 column if it exists
+  if ("xGD/90" %in% colnames(group)) {
+    group <- select(group, -`xGD/90`)
+  }
+  
+  return(group)
+}))
+
+# Display the combined tibble
+all_groups
+```
+
+> > Above we have used a for loop to clean the data which included changing the names of colums and filtering. We now have all the 8 group stages statistics for the 2022 WC which include: "Rank", "Squad", "Matches Played", "Wins", "Draws", "Losses", "Goals For", "Goals Against", "Goal Difference", "Points". We also combined all the groups into a single tibble.
+
+**In conclusion, we hope to create interesting data visualizations as well as find our which metrics affect the probability of entering the knockout/semi-final/advanced stages. We will also later on add more data such as player statistics to see any further patterns in the data**
