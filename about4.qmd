@@ -1,0 +1,175 @@
+---
+title: "Mini-Project 4: Text Analysis"
+format:  
+  html:
+    code-fold: false
+---
+
+This mini-project explores sentiment, uniqueness, and trends accross Tupac's songs. The data obtained from <https://www.kaggle.com/datasets/leopoldofacci/tupac-dataset-lyrics-analyse>.
+
+The data originally contained: "Lyrics", "Song", "Artist". I manually added the album names and will add years for time trajectory analysis in the final project.
+
+```{r}
+#Import relevant libraries
+library(dplyr)
+library(widyr)
+library(tidyverse)
+library(stringr)
+library(tidytext)
+library(DataEditR)
+library(wordcloud2)
+library(wordcloud)
+library(RColorBrewer)
+library(tidyr)
+library(tidytext)
+```
+
+```{r}
+#Read the data, and create a dictionary with regular expressions of cuss-words to filter out later.
+tupac_untidy <- read.csv("~/Sds 264 F24/lyrics-TUPAC.csv")
+cuss <- read.csv("~/Sds 264 F24/cuss2.csv")
+cuss_words_pattern <- paste0("\\b(", paste(cuss$word, collapse = "|"), ")\\b") 
+```
+
+```{r}
+#Create an unnested version of the dataset using str functions and regular expressions
+tupac_sep <- tupac_untidy |> 
+  unnest_tokens(word, Lyrics) |> 
+  anti_join(cuss, by = "word")
+
+tupac_tidy <- tupac_untidy |> 
+  mutate(Lyrics = str_replace_all(Lyrics, "\\n", " ")) 
+
+
+
+```
+
+```{r}
+#Through regular expressions, find out what are the largest numbers said in a song in the dataset
+tupac_sep |> 
+  mutate(number = as.numeric(str_extract(word, "\\b\\d+\\b"))) |>  
+  filter(!is.na(number) & Song != "When I Get Free II") |>  
+  slice_max(number, n = 10, with_ties = FALSE) |> 
+  select(Song, number)
+
+  
+
+```
+>> Here we can see that there are a lot of numbers, with some research we can find out that in the song "Outlawz" 2pac says "Things are not the same since 1995". 1995 is the year when 2pac was released pending an appeal of a conviction in 1995
+
+>>In Soulja's Story, 1993 refers to a line "Straight soldier, 1993 onward", I am unsure what it means as the song was released in 1991.
+
+```{r}
+#Find words that are repeating twice in a row using regular expressions
+tupac_tidy |> 
+  mutate(repeated_words = str_extract_all(Lyrics, "\\b(\\w+)\\b[\\s]+\\1\\b")) |> 
+  unnest(repeated_words) |> 
+  filter(!is.na(repeated_words)) |> 
+  distinct(Song, repeated_words) |> 
+  select(Song, repeated_words)
+```
+>> Some of the twice repeating words are silly and some are serious, for example "La la" and "murder murder". This shows the duality of 2pac.
+
+```{r}
+#Through str functions, find out longest words:
+tupac_sep |> 
+  distinct(word, .keep_all = TRUE) |>  # Keep only distinct words
+  mutate(word_length = str_length(word)) |>  # Calculate the length of each word
+  filter(Song!="All Eyez On Me") |> 
+  slice_max(word_length, n = 10, with_ties = FALSE)  # Select the top 10 longest words without ties
+
+```
+
+>>What could be the longest words in old-school rap? We see a famous catchphrase of 2pac which is yaknowhati'msayin	appearing in different songs, other words include: responsibilities, institutionalized, multimillionare, penitentiary, and congratulation. If anything- we can sense repeating themes of worry, money, and lifestyle.
+
+```{r}
+#Analyze the sentiment of positivity vs negativity in songs across albums
+bing_sentiment <- get_sentiments("bing")
+
+sentiment_scores <- tupac_sep |> 
+  filter(!is.na(word)) |> 
+  inner_join(bing_sentiment, by = "word") |>  #join sentiments and lyrics
+  group_by(Album, sentiment) |> 
+  summarize(sentiment_count = n(), .groups = 'drop') |> 
+  ungroup()
+
+ggplot(sentiment_scores, aes(x = Album, y = sentiment_count, fill = sentiment)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Positive and Negative Sentiment of Tupac Albums",
+    x = "Album",
+    y = "Sentiment Count",
+    fill = "Sentiment"
+  ) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_manual(values = c("positive" = "blue", "negative" = "black")) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+
+print(sentiment_scores)
+
+
+ 
+```
+>> Abnove, we can see the album with the highest positivity and negativity is All Eyez On Me. This album contains versatile songs and lyrics and as such it is not a surprise to see that it has the highest count of both sentiments.
+
+```{r}
+#Find the fear sentiment in 2pac songs and create a wordcloud
+nrc_sentiment <- get_sentiments("nrc")
+
+tupac_nrc <- tupac_sep|> 
+  filter(!is.na(word))|> 
+  inner_join(nrc_sentiment, by = "word")|> 
+  filter(sentiment == "fear")|>   # Focus only on fear sentiment
+  count(Album, word, sort = TRUE)|>  
+  distinct(word, .keep_all = TRUE)|>   # Remove duplicates per album
+  ungroup()
+
+top_fear_words <- tupac_nrc|> 
+  group_by(Album)|> 
+  slice_max(n, n = 7)|>   
+  ungroup()
+
+wordcloud(
+  words = top_fear_words$word, 
+  freq = top_fear_words$n, 
+  max.words = 200,  
+  random.order = FALSE,  
+  rot.per = 0.2,  
+  scale = c(4, 0.5), 
+  colors = brewer.pal(8, "Set1")  
+)
+
+```
+>> The wordcloud above highlights words with a fearing sentiment to them. Some words include "hate, cemetery, wicked, and god as the highest fear sentiment.
+
+```{r}
+#A tf-idf plot with bigrams per album
+tupac_ngram <- tupac_tidy |>
+  unnest_tokens(word, Lyrics) |> 
+  anti_join(stop_words, by = "word") |>  # Remove stop words
+  anti_join(cuss, by = "word") |>  # Remove cuss words from the 'cuss' dataset
+  group_by(Song, Album) |>  # Group by both Song and Album
+  summarise(Lyrics = str_c(word, collapse = " "), .groups = "drop") |>  # Collapse words into single Lyrics column
+  unnest_tokens(bigram, Lyrics, token = "ngrams", n = 2) |>  # Create bigrams
+  filter(!is.na(bigram))  # Filter out NA bigrams
+
+# Calculating TF-IDF and visualizing
+bigram_tf_idf <- tupac_ngram |> 
+  count(Album, bigram, sort = TRUE) |> 
+  bind_tf_idf(bigram, Album, n)
+
+bigram_tf_idf |>
+  group_by(Album) |>  # Group by Album for analysis
+  arrange(desc(tf_idf)) |>  # Arrange in descending order of tf_idf
+  slice_max(tf_idf, n = 10, with_ties = FALSE) |>  # Select top 10 bigrams per Album
+  ungroup() |>  
+  ggplot(aes(x = fct_reorder(bigram, tf_idf), y = tf_idf, fill = Album)) +  # Reorder bigrams based on tf_idf
+    geom_col(show.legend = FALSE) +  # Create bar plot
+    coord_flip() +  # Flip coordinates for horizontal bars
+    facet_wrap(~Album, scales = "free")
+
+```
+
+>> According to the td-idf statistic and analysis we can see a lot of 2pac's uniqueness in lyrics comes from themes of identity and even location (as California appears multpile times). For example, in 2Pacalypse now, 2Pac highlights his racial identity in sensitive detail. While "Greatest Hits" includes more lifestyle songs.
+
+#In conclusion, Tupac's music has a lot of versatality- with a wide variety of emotions and topics. 
