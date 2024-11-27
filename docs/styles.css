@@ -1,0 +1,33 @@
+body {
+  background: #c9a; 
+} 
+
+.about {
+  text-align: center;
+  margin: 40px auto; 
+  padding: 20px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  max-width: 500px; 
+  font-family: 'Arial', sans-serif;
+  font-size: 2em;
+  color: #333; 
+}
+
+img {
+  border-radius: 0%; 
+  border: 2px solid #80d;
+  width: 100%; 
+  height: auto;
+}
+.github-icon {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle; 
+}
+
+h1, h2 {
+  font-family: 'Arial', cursive, sans-serif;
+  color: #111;
+}
