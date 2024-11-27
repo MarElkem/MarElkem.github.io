@@ -144,45 +144,49 @@ interactivecompany <- complaints_company2 %>%
 ```
 
 
-
 ```{r, error=FALSE, message=FALSE, warning=FALSE}
-binColor <- colorFactor(palette = "Set3", domain = interactivecompany$Company)
+#file_path4="~/Sds 264 F24/MarElkem.github.io/interactivecompany.csv"
+#complaints_company2 <- read_csv("~/Sds 264 F24/MarElkem.github.io/complaints_company2.csv")
+#interactivecompany <- read_csv(file_path4) 
 
-interactivecompany <- interactivecompany %>%
-  mutate(labels = lapply(paste0("<strong>State: ", region, "</strong><br/>", #create our labels
-                                "Company: ", Company, "<br/>", 
-                                "Complaints: ", complaint_count), 
-                         HTML))
+#binColor <- colorFactor(palette = "Set3", domain = interactivecompany$Company)
 
-leaflet(interactivecompany) %>%
-  setView(lng = -96, lat = 37.8, zoom = 4) %>%  #focus the map on the US
-  addTiles() %>%
-  addPolygons(
-    weight = 2,
-    opacity = 1,
-    fillColor = ~binColor(Company),  
-    color = "black",
-    dashArray = "3",
-    fillOpacity = 0.7,
-    highlightOptions = highlightOptions(
-      weight = 5,
-      color = "#666",
-      dashArray = "",
-      fillOpacity = 0.7,
-      bringToFront = TRUE
-    ),
-    label = ~labels,
-    labelOptions = labelOptions(
-      style = list("font-weight" = "normal", padding = "3px 8px"),
-      textsize = "15px",
-      direction = "auto"
-    )
-  ) %>% 
-  addControl(
-    html = "Data Source: <a href='https://www.consumerfinance.gov/'>Consumer Financial Protection 
-    Bureau</a> (Complaints from 06/01/2024 - 09/10/2024)", 
-    position = "bottomleft"
-  )
+#interactivecompany <- interactivecompany |> 
+#  mutate(labels = lapply(paste0("<strong>State: ", region, "</strong><br/>", #create our labels
+ #                               "Company: ", Company, "<br/>", 
+  #                              "Complaints: ", complaint_count), 
+   #                      HTML))
+
+#leaflet(interactivecompany) |> 
+ # setView(lng = -96, lat = 37.8, zoom = 4) |>   #focus the map on the US
+  #addTiles() %>%
+  #addPolygons(
+   # weight = 2,
+    #opacity = 1,
+    #fillColor = ~binColor(Company),  
+    #color = "black",
+    #dashArray = "3",
+    #fillOpacity = 0.7,
+    #highlightOptions = highlightOptions(
+    #  weight = 5,
+    #  color = "#666",
+    #  dashArray = "",
+    #  fillOpacity = 0.7,
+    #  bringToFront = TRUE
+  #  ),
+  #  label = ~labels,
+   # labelOptions = labelOptions(
+    #  style = list("font-weight" = "normal", padding = "3px 8px"),
+     # textsize = "15px",
+      #direction = "auto"
+    #)
+ # ) %>% 
+#  addControl(
+ #   html = "Data Source: <a href='https://www.consumerfinance.gov/'>Consumer Financial Protection 
+  #  Bureau</a> (Complaints from 06/01/2024 - 09/10/2024)", 
+   # position = "bottomleft"
+  #)
   
+
 ```
 **Hover over the states to see what company they have complained about the most!**
