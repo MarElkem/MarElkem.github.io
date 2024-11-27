@@ -10,6 +10,7 @@ website:
       - about.qmd
       - about2.qmd
       - about3.qmd
+      - about4.qmd
 
 format:
   html:
