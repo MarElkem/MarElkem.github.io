@@ -1,0 +1,191 @@
+---
+title: "Mini-Project 1: Maps (Interactive)"
+---
+
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+**This is a continuation of MP1, where we have the same insights and data but in an interactive form!**
+
+```{r, echo=FALSE, warning=FALSE, include=FALSE}
+#loading all libraries and data below
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(mdsr)      # package associated with our MDSR book
+library(maps)
+library(htmltools)
+library(glue)
+library(leaflet)
+
+
+library(sf) 
+
+
+```
+
+```{r, echo=FALSE, warning=FALSE, include=FALSE, eval=FALSE}
+
+file_path="~/Sds 264 F24/MarElkem.github.io/complaints-2024-09-16_16_32.csv"
+
+states <- read_sf("https://rstudio.github.io/leaflet/json/us-states.geojson")  
+
+class(states) 
+
+states
+
+complaints <- read_csv(file_path)
+
+complaints
+
+colnames(complaints) 
+```
+
+
+```{r, echo=FALSE, warning=FALSE, include=FALSE, eval=FALSE}
+#put EVAL = FALSE FOR ALL ABOVE
+#rename all states in our complaint dataset to match with us_states and states
+complaints <- complaints |> 
+   mutate(region = case_when(
+    State == "AL" ~ "alabama", State == "AK" ~ "alaska", State == "AZ" ~ "arizona",
+    State == "AR" ~ "arkansas", State == "CA" ~ "california", State == "CO" ~ "colorado",
+    State == "CT" ~ "connecticut", State == "DE" ~ "delaware", State == "FL" ~ "florida",
+    State == "GA" ~ "georgia", State == "HI" ~ "hawaii", State == "ID" ~ "idaho",
+    State == "IL" ~ "illinois", State == "IN" ~ "indiana", State == "IA" ~ "iowa",
+    State == "KS" ~ "kansas", State == "KY" ~ "kentucky", State == "LA" ~ "louisiana",
+    State == "ME" ~ "maine", State == "MD" ~ "maryland", State == "MA" ~ "massachusetts",
+    State == "MI" ~ "michigan", State == "MN" ~ "minnesota", State == "MS" ~ "mississippi",
+    State == "MO" ~ "missouri", State == "MT" ~ "montana", State == "NE" ~ "nebraska",
+    State == "NV" ~ "nevada", State == "NH" ~ "new hampshire", State == "NJ" ~ "new jersey",
+    State == "NM" ~ "new mexico", State == "NY" ~ "new york", State == "NC" ~ "north carolina",
+    State == "ND" ~ "north dakota", State == "OH" ~ "ohio", State == "OK" ~ "oklahoma",
+    State == "OR" ~ "oregon", State == "PA" ~ "pennsylvania", State == "RI" ~ "rhode island",
+    State == "SC" ~ "south carolina", State == "SD" ~ "south dakota", State == "TN" ~ "tennessee",
+    State == "TX" ~ "texas", State == "UT" ~ "utah", State == "VT" ~ "vermont",
+    State == "VA" ~ "virginia", State == "WA" ~ "washington", State == "WV" ~ "west virginia",
+    State == "WI" ~ "wisconsin", State == "WY" ~ "wyoming"
+  )) 
+
+```
+
+```{r, warning=FALSE, eval=FALSE}
+#use the states dataset for interactive map plots and rename the column "name" which indicates state in order to join with our variable dataset.
+
+file_path1="~/Sds 264 F24/MarElkem.github.io/states.csv"
+
+states <- read_csv(file_path1)  
+
+states <- states %>%
+  rename(region = name) %>%               
+  mutate(region = tolower(region))        
+
+```
+
+```{r, warning=FALSE, warning=FALSE}
+#create our first subset of our dataset: most complaining states!
+file_path0="~/Sds 264 F24/MarElkem.github.io/complaints_summary.csv"
+
+complaints_summary <- read_csv(file_path0) 
+complaints_summary <- complaints_summary %>% #WRITE AS CSV THEN READ IT IN THE FILES AND DO THE SAME FOR ALL THE NEXT DATASETS
+  group_by(region) %>% 
+  summarize(total_complaints = n())
+
+
+
+```
+
+```{r, error=FALSE, message=FALSE, warning=FALSE,eval=FALSE}
+# save it and join with us_states for interactive plot
+
+file_path2="~/Sds 264 F24/MarElkem.github.io/complaints_geo.csv"
+
+complaints_geo <- read_csv(file_path2) 
+
+complaints_geo <- complaints_summary %>%
+  left_join(states, by = "region") %>% 
+  st_as_sf() 
+
+
+  write_csv(complaints_geo, "complaints_geo1.csv")
+  
+
+#write_csv(complaints_summary, "complaints_geo.csv")
+#complaints_geo <- read_csv("complaints_geo.csv")
+
+
+
+
+```
+
+```{r, warning=FALSE, eval=FALSE}
+
+complaints_geo2 <- read_csv("complaints_geo1.csv") 
+
+
+
+complaints_geo2 <- complaints_geo2 %>%
+  mutate(geometry = st_as_sfc(geometry)) 
+
+complaints_geo2 <- st_as_sf(complaints_geo2)
+
+leaflet(complaints_geo2) %>%
+  addTiles() %>%
+  addPolygons(
+    fillColor = ~colorNumeric("viridis", complaints_geo2$total_complaints)(total_complaints), #we want to show the variable "total complaints"
+    weight = 1,
+    color = "black",
+    fillOpacity = 0.7,
+    label = ~paste(region, "Complaints:", total_complaints) #pop-up label format
+  ) %>%
+  addLegend(
+    pal = colorNumeric("viridis", complaints_geo2$total_complaints), 
+    values = complaints_geo2$total_complaints,
+    title = "Number of Complaints",
+    position = "bottomright"
+  ) %>% 
+  addControl(
+    html = "Data Source: <a href='https://www.consumerfinance.gov/'>Consumer Financial Protection Bureau</a> (Complaints from 06/01/2024 - 09/10/2024)", 
+    position = "bottomleft"
+  )
+
+```
+
+**Hover over the states to see how many complaints they have filed!**
+
+```{r, warning=FALSE,eval=FALSE}
+#second interactive plot, most complained about companies!
+file_path3="~/Sds 264 F24/MarElkem.github.io/complaints_company2.csv"
+
+complaints_company2 <- read_csv(file_path3) 
+
+complaints_company2 <- complaints %>%
+  group_by(region, Company) %>%
+  summarize(complaint_count = n(), .groups = "drop") %>%  
+  slice_max(order_by = complaint_count, n = 1, by=region, with_ties = FALSE)  #get the most complained about company for every state
+
+write_csv(complaints_company2, "complaints_company2.csv")
+complaints_company2 <- read_csv("complaints_company2.csv")
+
+
+```
+
+```{r, warning=FALSE, eval=FALSE}
+#join it to our interactive mapping dataset, state
+file_path4="~/Sds 264 F24/MarElkem.github.io/interactivecompany.csv"
+complaints_company2 <- read_csv("~/Sds 264 F24/MarElkem.github.io/complaints_company2.csv")
+interactivecompany <- read_csv(file_path4) 
+
+interactivecompany <- complaints_company2 %>% 
+  left_join(states, by="region") %>% 
+    st_as_sf()
+write_csv(interactivecompany, "interactivecompany.csv")
+interactivecompany <- read_csv("interactivecompany.csv")
+  
+```
+
+
+**Hover over the states to see what company they have complained about the most!**
