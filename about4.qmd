@@ -147,10 +147,10 @@ wordcloud(
 tupac_ngram <- tupac_tidy |>
   unnest_tokens(word, Lyrics) |> 
   anti_join(stop_words, by = "word") |>  # Remove stop words
-  anti_join(cuss, by = "word") |>  # Remove cuss words from the 'cuss' dataset
-  group_by(Song, Album) |>  # Group by both Song and Album
+  anti_join(cuss, by = "word") |>  # Remove cuss words 
+  group_by(Song, Album) |> 
   summarise(Lyrics = str_c(word, collapse = " "), .groups = "drop") |>  # Collapse words into single Lyrics column
-  unnest_tokens(bigram, Lyrics, token = "ngrams", n = 2) |>  # Create bigrams
+  unnest_tokens(bigram, Lyrics, token = "ngrams", n = 2) |> 
   filter(!is.na(bigram))  # Filter out NA bigrams
 
 # Calculating TF-IDF and visualizing
@@ -159,8 +159,8 @@ bigram_tf_idf <- tupac_ngram |>
   bind_tf_idf(bigram, Album, n)
 
 bigram_tf_idf |>
-  group_by(Album) |>  # Group by Album for analysis
-  arrange(desc(tf_idf)) |>  # Arrange in descending order of tf_idf
+  group_by(Album) |> 
+  arrange(desc(tf_idf)) |> 
   slice_max(tf_idf, n = 10, with_ties = FALSE) |>  # Select top 10 bigrams per Album
   ungroup() |>  
   ggplot(aes(x = fct_reorder(bigram, tf_idf), y = tf_idf, fill = Album)) +  # Reorder bigrams based on tf_idf
